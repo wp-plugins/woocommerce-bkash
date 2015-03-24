@@ -3,7 +3,7 @@
 Plugin Name: bKash for WooCommerce
 Plugin URI: http://wedevs.com
 Description: bKash payment gateway integration for WooCommerce
-Version: 0.1
+Version: 1.0
 Author: Tareq Hasan
 Author URI: http://tareq.wedevs.com
 */
@@ -16,7 +16,10 @@ if ( !defined( 'ABSPATH' ) ) exit;
  *
  * @author Tareq Hasan
  */
-class WC_bKash {
+class WeDevs_bKash {
+
+    private $db_version = '1.0';
+    private $version_key = '_bkash_version';
 
     /**
      * Kick off the plugin
@@ -34,13 +37,12 @@ class WC_bKash {
      * @return void
      */
     function init() {
-        if ( !class_exists( 'WC_Payment_Gateway' ) ) {
+        if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
             return;
         }
 
-        require_once dirname( __FILE__ ) . '/gateway.php';
-
-        new WC_Gateway_bKash();
+        require_once dirname( __FILE__ ) . '/includes/class-wc-bkash.php';
+        require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-bkash.php';
     }
 
     /**
@@ -75,8 +77,33 @@ class WC_bKash {
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 
         $wpdb->query( $query );
+
+        $this->plugin_upgrades();
+
+        update_option( $this->version_key, $this->db_version );
     }
 
+    /**
+     * Do plugin upgrade tasks
+     *
+     * @return void
+     */
+    private function plugin_upgrades() {
+        global $wpdb;
+
+        $version = get_option( $this->version_key, '0.1' );
+
+        if ( version_compare( $this->db_version, $version, '<=' ) ) {
+            return;
+        }
+
+        switch ( $version ) {
+            case '0.1':
+                $sql = "ALTER TABLE `{$wpdb->prefix}wc_bkash` CHANGE `trxId` `trxId` BIGINT(20) NULL DEFAULT NULL;";
+                $wpdb->query( $sql );
+                break;
+        }
+    }
 }
 
-new WC_bKash();
+new WeDevs_bKash();
